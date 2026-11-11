@@ -1,0 +1,247 @@
+{
+  "$defs": {
+    "AssetTwinState": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "default": "unknown",
+          "enum": [
+            "ok",
+            "warning",
+            "fault",
+            "offline",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "freshness_s": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Freshness S",
+          "type": "number"
+        },
+        "confidence": {
+          "default": "unverified",
+          "enum": [
+            "verified",
+            "unverified",
+            "estimated"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TagValue"
+          },
+          "title": "Values",
+          "type": "object"
+        },
+        "derived": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TagValue"
+          },
+          "title": "Derived",
+          "type": "object"
+        },
+        "residuals": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Residuals",
+          "type": "object"
+        },
+        "active_alarms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Active Alarms",
+          "type": "array"
+        }
+      },
+      "title": "AssetTwinState",
+      "type": "object"
+    },
+    "EnergyBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "pv_kw": {
+          "default": 0.0,
+          "title": "Pv Kw",
+          "type": "number"
+        },
+        "bess_kw": {
+          "default": 0.0,
+          "title": "Bess Kw",
+          "type": "number"
+        },
+        "genset_kw": {
+          "default": 0.0,
+          "title": "Genset Kw",
+          "type": "number"
+        },
+        "load_kw": {
+          "default": 0.0,
+          "title": "Load Kw",
+          "type": "number"
+        },
+        "losses_kw": {
+          "default": 0.0,
+          "title": "Losses Kw",
+          "type": "number"
+        },
+        "imbalance_kw": {
+          "default": 0.0,
+          "title": "Imbalance Kw",
+          "type": "number"
+        },
+        "renewable_fraction_pct": {
+          "default": 100.0,
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Renewable Fraction Pct",
+          "type": "number"
+        }
+      },
+      "title": "EnergyBalance",
+      "type": "object"
+    },
+    "Provenance": {
+      "description": "Data provenance indicator.",
+      "enum": [
+        "measured",
+        "calculated",
+        "estimated",
+        "predicted",
+        "simulated"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "QualityCode": {
+      "description": "Signal quality flags aligned to IEC / canonical specifications.",
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "title": "QualityCode",
+      "type": "integer"
+    },
+    "TagValue": {
+      "additionalProperties": false,
+      "properties": {
+        "v": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "V"
+        },
+        "u": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "U"
+        },
+        "t": {
+          "title": "T",
+          "type": "string"
+        },
+        "q": {
+          "$ref": "#/$defs/QualityCode",
+          "default": 0
+        },
+        "p": {
+          "$ref": "#/$defs/Provenance",
+          "default": "measured"
+        }
+      },
+      "required": [
+        "t"
+      ],
+      "title": "TagValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Canonical live digital twin state.",
+  "properties": {
+    "schema": {
+      "const": "twin.state/1.0",
+      "default": "twin.state/1.0",
+      "title": "Schema",
+      "type": "string"
+    },
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "asof": {
+      "title": "Asof",
+      "type": "string"
+    },
+    "mode": {
+      "default": "live",
+      "enum": [
+        "live",
+        "replay",
+        "forecast",
+        "what_if",
+        "advisory"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "link_state": {
+      "default": "offline",
+      "enum": [
+        "online",
+        "backfilling",
+        "degraded",
+        "offline"
+      ],
+      "title": "Link State",
+      "type": "string"
+    },
+    "assets": {
+      "additionalProperties": {
+        "$ref": "#/$defs/AssetTwinState"
+      },
+      "title": "Assets",
+      "type": "object"
+    },
+    "energy_balance": {
+      "$ref": "#/$defs/EnergyBalance"
+    }
+  },
+  "required": [
+    "site_id",
+    "asof"
+  ],
+  "title": "SiteTwinState",
+  "type": "object"
+}

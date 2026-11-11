@@ -1,0 +1,213 @@
+{
+  "$defs": {
+    "SiteAssetEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "catalog": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalog"
+        },
+        "kwp": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kwp"
+        },
+        "tilt": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tilt"
+        },
+        "azimuth": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Azimuth"
+        },
+        "inverter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inverter"
+        },
+        "pcs": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pcs"
+        },
+        "meter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Meter"
+        },
+        "feeder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Feeder"
+        },
+        "customers": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Customers"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "waive": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Waive",
+          "type": "array"
+        },
+        "extra": {
+          "additionalProperties": true,
+          "title": "Extra",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "SiteAssetEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Site configuration stored in site.yaml.",
+  "properties": {
+    "site": {
+      "title": "Site",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "timezone": {
+      "default": "Africa/Accra",
+      "title": "Timezone",
+      "type": "string"
+    },
+    "location": {
+      "description": "(latitude, longitude)",
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Location",
+      "type": "array"
+    },
+    "gateway": {
+      "title": "Gateway",
+      "type": "string"
+    },
+    "assets": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SiteAssetEntry"
+      },
+      "title": "Assets",
+      "type": "object"
+    }
+  },
+  "required": [
+    "site",
+    "name",
+    "location",
+    "gateway"
+  ],
+  "title": "SiteConfig",
+  "type": "object"
+}

@@ -1,0 +1,49 @@
+type: meter
+manufacturer: ExampleMeter
+model: EM-3P
+config:
+  role: pcc
+  ct_ratio: 1.0
+  accuracy_class: 0.5S
+  direction_convention: as_is
+expected_tags:
+  - p_active
+  - v_grid
+  - f_grid
+registers:
+  - asset: MTR_PCC
+    tag: p_active
+    register: 400
+    function: holding
+    type: int16
+    scale: 0.1
+    unit: kW
+    sign: as_is
+    class: fast
+    min: -100.0
+    max: 100.0
+    writable: false
+  - asset: MTR_PCC
+    tag: v_grid
+    register: 401
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: V
+    sign: as_is
+    class: standard
+    min: 150.0
+    max: 300.0
+    writable: false
+  - asset: MTR_PCC
+    tag: f_grid
+    register: 402
+    function: holding
+    type: uint16
+    scale: 0.01
+    unit: Hz
+    sign: as_is
+    class: fast
+    min: 40.0
+    max: 60.0
+    writable: false

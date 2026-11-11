@@ -1,0 +1,150 @@
+{
+  "$defs": {
+    "SeriesColumn": {
+      "additionalProperties": false,
+      "description": "Columnar time-series segment for an individual asset tag.",
+      "properties": {
+        "asset": {
+          "description": "Asset identifier (e.g. BESS_01)",
+          "title": "Asset",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Canonical tag name (e.g. soc, p_dc)",
+          "title": "Tag",
+          "type": "string"
+        },
+        "u": {
+          "description": "Unit of measurement (e.g. %, kW, V)",
+          "title": "U",
+          "type": "string"
+        },
+        "t": {
+          "description": "Millisecond offsets from batch t0_ms",
+          "items": {
+            "type": "integer"
+          },
+          "title": "T",
+          "type": "array"
+        },
+        "v": {
+          "description": "Measured / sampled values",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "V",
+          "type": "array"
+        },
+        "q": {
+          "description": "Quality codes per sample (0=good, 1=uncertain, 2=bad, 3=stale)",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Q",
+          "type": "array"
+        }
+      },
+      "required": [
+        "asset",
+        "tag",
+        "u",
+        "t",
+        "v",
+        "q"
+      ],
+      "title": "SeriesColumn",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Columnar compressed telemetry batch payload.",
+  "properties": {
+    "schema": {
+      "const": "telemetry.batch/1.0",
+      "default": "telemetry.batch/1.0",
+      "title": "Schema",
+      "type": "string"
+    },
+    "site_id": {
+      "description": "Site identifier (e.g. VLK-ISL-001)",
+      "title": "Site Id",
+      "type": "string"
+    },
+    "gateway_id": {
+      "description": "Gateway identifier (e.g. GW-VLK-001)",
+      "title": "Gateway Id",
+      "type": "string"
+    },
+    "stream": {
+      "const": "telemetry",
+      "default": "telemetry",
+      "title": "Stream",
+      "type": "string"
+    },
+    "seq": {
+      "description": "Monotonically increasing sequence number per stream",
+      "minimum": 0,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "t0_ms": {
+      "description": "Base epoch timestamp in milliseconds",
+      "minimum": 0,
+      "title": "T0 Ms",
+      "type": "integer"
+    },
+    "clock_quality": {
+      "default": "synced",
+      "enum": [
+        "synced",
+        "unsynced"
+      ],
+      "title": "Clock Quality",
+      "type": "string"
+    },
+    "clock_offset_ms": {
+      "default": 0,
+      "description": "Estimated NTP offset in milliseconds",
+      "title": "Clock Offset Ms",
+      "type": "integer"
+    },
+    "cfg_version": {
+      "description": "Active configuration version string",
+      "title": "Cfg Version",
+      "type": "string"
+    },
+    "resolution": {
+      "default": "raw",
+      "enum": [
+        "raw",
+        "agg_1m",
+        "agg_5m"
+      ],
+      "title": "Resolution",
+      "type": "string"
+    },
+    "series": {
+      "items": {
+        "$ref": "#/$defs/SeriesColumn"
+      },
+      "title": "Series",
+      "type": "array"
+    }
+  },
+  "required": [
+    "site_id",
+    "gateway_id",
+    "seq",
+    "t0_ms",
+    "cfg_version"
+  ],
+  "title": "TelemetryBatch",
+  "type": "object"
+}

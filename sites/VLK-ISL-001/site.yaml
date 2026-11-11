@@ -1,0 +1,38 @@
+site: VLK-ISL-001
+name: Volta Lake Pilot Island 001
+timezone: Africa/Accra
+location: [7.80, -0.05]
+gateway: GW-VLK-001
+assets:
+  PV_ARR_01:
+    type: pv_array
+    kwp: 60.5
+    tilt: 10
+    azimuth: 180
+    inverter: PV_INV_01
+  PV_INV_01:
+    type: pv_inverter
+    catalog: exampleinv/EI-50K
+  BESS_01:
+    type: bess
+    catalog: examplebatt/EB-LFP-200
+    pcs: PCS_01
+  PCS_01:
+    type: pcs
+    catalog: exampleinv/EI-GF50
+  MTR_PCC:
+    type: meter
+    role: pcc
+    catalog: examplemeter/EM-3P
+  WX_01:
+    type: weather_station
+    waive: [rain, wind_dir]
+  FDR_01:
+    type: feeder
+    customers: 140
+    meter: MTR_PCC
+  LOAD_RES:
+    type: load_group
+    category: residential
+    customers: 140
+    feeder: FDR_01

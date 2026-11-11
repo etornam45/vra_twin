@@ -1,0 +1,40 @@
+gateway: GW-VLK-001
+uplink:
+  broker: localhost
+  port: 1883
+  use_tls: false
+  profile: slow_link
+  live_window_s: 120
+  ack_timeout_s: 30
+  inflight_max: 5
+  backfill_max_kbps: 256
+devices:
+  - asset: PV_INV_01
+    protocol: modbus_tcp
+    host: 127.0.0.1
+    port: 5020
+    unit_id: 1
+    poll_interval_s: 1.0
+  - asset: BESS_01
+    protocol: modbus_tcp
+    host: 127.0.0.1
+    port: 5020
+    unit_id: 2
+    poll_interval_s: 1.0
+  - asset: PCS_01
+    protocol: modbus_tcp
+    host: 127.0.0.1
+    port: 5020
+    unit_id: 3
+    poll_interval_s: 1.0
+  - asset: MTR_PCC
+    protocol: modbus_tcp
+    host: 127.0.0.1
+    port: 5020
+    unit_id: 4
+    poll_interval_s: 1.0
+commands:
+  enabled: false
+disk_budget_mb: 2048
+downsample_pressure_pct: 70.0
+drop_pressure_pct: 95.0

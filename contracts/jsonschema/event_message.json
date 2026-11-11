@@ -1,0 +1,127 @@
+{
+  "additionalProperties": false,
+  "description": "System event, alarm, or data gap message.",
+  "properties": {
+    "schema": {
+      "const": "event/1.0",
+      "default": "event/1.0",
+      "title": "Schema",
+      "type": "string"
+    },
+    "event_id": {
+      "description": "UUID or unique event identifier",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "gateway_id": {
+      "title": "Gateway Id",
+      "type": "string"
+    },
+    "stream": {
+      "const": "events",
+      "default": "events",
+      "title": "Stream",
+      "type": "string"
+    },
+    "seq": {
+      "minimum": 0,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "kind": {
+      "enum": [
+        "alarm_raise",
+        "alarm_clear",
+        "state_change",
+        "comms_lost",
+        "comms_restored",
+        "data_gap",
+        "gateway",
+        "config_applied",
+        "command"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "asset_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Asset Id"
+    },
+    "code": {
+      "title": "Code",
+      "type": "string"
+    },
+    "source_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Code"
+    },
+    "severity": {
+      "default": "info",
+      "enum": [
+        "info",
+        "warning",
+        "high",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    },
+    "ts": {
+      "title": "Ts",
+      "type": "string"
+    },
+    "cleared_ts": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cleared Ts"
+    },
+    "context": {
+      "additionalProperties": true,
+      "title": "Context",
+      "type": "object"
+    }
+  },
+  "required": [
+    "event_id",
+    "site_id",
+    "gateway_id",
+    "seq",
+    "kind",
+    "code",
+    "message",
+    "ts"
+  ],
+  "title": "EventMessage",
+  "type": "object"
+}

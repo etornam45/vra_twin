@@ -1,0 +1,150 @@
+{
+  "$defs": {
+    "BessCapacityTest": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "title": "Date",
+          "type": "string"
+        },
+        "capacity_kwh": {
+          "exclusiveMinimum": 0,
+          "title": "Capacity Kwh",
+          "type": "number"
+        },
+        "temp_c": {
+          "title": "Temp C",
+          "type": "number"
+        },
+        "c_rate": {
+          "exclusiveMinimum": 0,
+          "title": "C Rate",
+          "type": "number"
+        }
+      },
+      "required": [
+        "date",
+        "capacity_kwh",
+        "temp_c",
+        "c_rate"
+      ],
+      "title": "BessCapacityTest",
+      "type": "object"
+    },
+    "BessWarranty": {
+      "additionalProperties": false,
+      "properties": {
+        "years": {
+          "minimum": 1,
+          "title": "Years",
+          "type": "integer"
+        },
+        "min_soh_pct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Min Soh Pct",
+          "type": "number"
+        },
+        "cycles_at_dod": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cycles At Dod"
+        }
+      },
+      "required": [
+        "years",
+        "min_soh_pct"
+      ],
+      "title": "BessWarranty",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Battery Energy Storage System (BESS) configuration.",
+  "properties": {
+    "chemistry": {
+      "default": "LFP",
+      "title": "Chemistry",
+      "type": "string"
+    },
+    "rated_energy_kwh": {
+      "exclusiveMinimum": 0,
+      "title": "Rated Energy Kwh",
+      "type": "number"
+    },
+    "usable_energy_kwh": {
+      "exclusiveMinimum": 0,
+      "title": "Usable Energy Kwh",
+      "type": "number"
+    },
+    "max_charge_kw": {
+      "exclusiveMinimum": 0,
+      "title": "Max Charge Kw",
+      "type": "number"
+    },
+    "max_discharge_kw": {
+      "exclusiveMinimum": 0,
+      "title": "Max Discharge Kw",
+      "type": "number"
+    },
+    "soc_min_pct": {
+      "default": 10.0,
+      "maximum": 50,
+      "minimum": 0,
+      "title": "Soc Min Pct",
+      "type": "number"
+    },
+    "soc_max_pct": {
+      "default": 95.0,
+      "maximum": 100,
+      "minimum": 50,
+      "title": "Soc Max Pct",
+      "type": "number"
+    },
+    "temp_limits_c": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Temp Limits C",
+      "type": "object"
+    },
+    "warranty": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BessWarranty"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reference_capacity_test": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BessCapacityTest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "rated_energy_kwh",
+    "usable_energy_kwh",
+    "max_charge_kw",
+    "max_discharge_kw"
+  ],
+  "title": "BessConfig",
+  "type": "object"
+}

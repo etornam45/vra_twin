@@ -1,0 +1,97 @@
+{
+  "$defs": {
+    "SelectiveAckReject": {
+      "additionalProperties": false,
+      "description": "Specific rejection details for a poison or invalid batch.",
+      "properties": {
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        }
+      },
+      "required": [
+        "seq",
+        "reason"
+      ],
+      "title": "SelectiveAckReject",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Selective ACK returned by the backend after database commit.",
+  "properties": {
+    "schema": {
+      "const": "ack/1.0",
+      "default": "ack/1.0",
+      "title": "Schema",
+      "type": "string"
+    },
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "gateway_id": {
+      "title": "Gateway Id",
+      "type": "string"
+    },
+    "stream": {
+      "default": "telemetry",
+      "title": "Stream",
+      "type": "string"
+    },
+    "ranges": {
+      "description": "Inclusive sequence ranges committed to DB, e.g. [[10, 20], [25, 25]]",
+      "items": {
+        "maxItems": 2,
+        "minItems": 2,
+        "prefixItems": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "integer"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Ranges",
+      "type": "array"
+    },
+    "rejected": {
+      "description": "Batches explicitly rejected (quarantine by gateway)",
+      "items": {
+        "$ref": "#/$defs/SelectiveAckReject"
+      },
+      "title": "Rejected",
+      "type": "array"
+    },
+    "committed_at": {
+      "title": "Committed At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "site_id",
+    "gateway_id",
+    "committed_at"
+  ],
+  "title": "SelectiveAck",
+  "type": "object"
+}

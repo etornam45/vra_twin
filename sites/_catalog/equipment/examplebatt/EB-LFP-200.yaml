@@ -1,0 +1,99 @@
+type: bess
+manufacturer: ExampleBatt
+model: EB-LFP-200
+config:
+  chemistry: LFP
+  rated_energy_kwh: 200.0
+  usable_energy_kwh: 180.0
+  max_charge_kw: 50.0
+  max_discharge_kw: 50.0
+  soc_min_pct: 10.0
+  soc_max_pct: 95.0
+  temp_limits_c:
+    charge_min: 5.0
+    charge_max: 45.0
+    discharge_min: -10.0
+    discharge_max: 55.0
+  warranty:
+    years: 10
+    min_soh_pct: 70.0
+expected_tags:
+  - soc
+  - p_dc
+  - v_dc
+  - i_dc
+  - t_max
+  - soh
+registers:
+  - asset: BESS_01
+    tag: soc
+    register: 200
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: "%"
+    sign: as_is
+    class: standard
+    min: 0.0
+    max: 100.0
+    writable: false
+  - asset: BESS_01
+    tag: p_dc
+    register: 201
+    function: holding
+    type: int16
+    scale: 0.1
+    unit: kW
+    sign: as_is
+    class: standard
+    min: -60.0
+    max: 60.0
+    writable: false
+  - asset: BESS_01
+    tag: v_dc
+    register: 202
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: V
+    sign: as_is
+    class: standard
+    min: 0.0
+    max: 100.0
+    writable: false
+  - asset: BESS_01
+    tag: i_dc
+    register: 203
+    function: holding
+    type: int16
+    scale: 0.1
+    unit: A
+    sign: as_is
+    class: standard
+    min: -200.0
+    max: 200.0
+    writable: false
+  - asset: BESS_01
+    tag: t_max
+    register: 204
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: degC
+    sign: as_is
+    class: standard
+    min: -20.0
+    max: 80.0
+    writable: false
+  - asset: BESS_01
+    tag: soh
+    register: 205
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: "%"
+    sign: as_is
+    class: standard
+    min: 0.0
+    max: 100.0
+    writable: false

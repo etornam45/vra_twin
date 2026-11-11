@@ -1,0 +1,233 @@
+{
+  "$defs": {
+    "CommandsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "rate_limit_per_min": {
+          "default": 6,
+          "minimum": 1,
+          "title": "Rate Limit Per Min",
+          "type": "integer"
+        },
+        "readback_timeout_s": {
+          "default": 15,
+          "minimum": 1,
+          "title": "Readback Timeout S",
+          "type": "integer"
+        },
+        "allowed_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Types",
+          "type": "array"
+        }
+      },
+      "title": "CommandsConfig",
+      "type": "object"
+    },
+    "DeviceConnection": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "protocol": {
+          "enum": [
+            "modbus_tcp",
+            "modbus_rtu",
+            "opcua",
+            "vendor_rest",
+            "csv_tail"
+          ],
+          "title": "Protocol",
+          "type": "string"
+        },
+        "host": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Host"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Port"
+        },
+        "unit_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit Id"
+        },
+        "serial_port": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Serial Port"
+        },
+        "baudrate": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baudrate"
+        },
+        "poll_interval_s": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Poll Interval S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "asset",
+        "protocol"
+      ],
+      "title": "DeviceConnection",
+      "type": "object"
+    },
+    "UplinkConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "broker": {
+          "title": "Broker",
+          "type": "string"
+        },
+        "port": {
+          "default": 8883,
+          "title": "Port",
+          "type": "integer"
+        },
+        "use_tls": {
+          "default": true,
+          "title": "Use Tls",
+          "type": "boolean"
+        },
+        "profile": {
+          "default": "normal",
+          "enum": [
+            "normal",
+            "slow_link",
+            "metered"
+          ],
+          "title": "Profile",
+          "type": "string"
+        },
+        "live_window_s": {
+          "default": 120,
+          "minimum": 10,
+          "title": "Live Window S",
+          "type": "integer"
+        },
+        "ack_timeout_s": {
+          "default": 30,
+          "minimum": 5,
+          "title": "Ack Timeout S",
+          "type": "integer"
+        },
+        "inflight_max": {
+          "default": 5,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Inflight Max",
+          "type": "integer"
+        },
+        "backfill_max_kbps": {
+          "default": 256,
+          "minimum": 16,
+          "title": "Backfill Max Kbps",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "broker"
+      ],
+      "title": "UplinkConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Configuration stored in gateway.yaml on the edge device.",
+  "properties": {
+    "gateway": {
+      "title": "Gateway",
+      "type": "string"
+    },
+    "uplink": {
+      "$ref": "#/$defs/UplinkConfig"
+    },
+    "devices": {
+      "items": {
+        "$ref": "#/$defs/DeviceConnection"
+      },
+      "title": "Devices",
+      "type": "array"
+    },
+    "commands": {
+      "$ref": "#/$defs/CommandsConfig"
+    },
+    "disk_budget_mb": {
+      "default": 2048,
+      "minimum": 256,
+      "title": "Disk Budget Mb",
+      "type": "integer"
+    },
+    "downsample_pressure_pct": {
+      "default": 70.0,
+      "maximum": 95.0,
+      "minimum": 50.0,
+      "title": "Downsample Pressure Pct",
+      "type": "number"
+    },
+    "drop_pressure_pct": {
+      "default": 95.0,
+      "maximum": 99.0,
+      "minimum": 80.0,
+      "title": "Drop Pressure Pct",
+      "type": "number"
+    }
+  },
+  "required": [
+    "gateway",
+    "uplink"
+  ],
+  "title": "GatewayConfig",
+  "type": "object"
+}

@@ -1,0 +1,112 @@
+{
+  "additionalProperties": false,
+  "description": "Signed remote command issued from central backend.",
+  "properties": {
+    "schema": {
+      "const": "command/1.0",
+      "default": "command/1.0",
+      "title": "Schema",
+      "type": "string"
+    },
+    "cmd_id": {
+      "title": "Cmd Id",
+      "type": "string"
+    },
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "gateway_id": {
+      "title": "Gateway Id",
+      "type": "string"
+    },
+    "asset_id": {
+      "title": "Asset Id",
+      "type": "string"
+    },
+    "type": {
+      "title": "Type",
+      "type": "string"
+    },
+    "class": {
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "X"
+      ],
+      "title": "Class",
+      "type": "string"
+    },
+    "params": {
+      "additionalProperties": true,
+      "title": "Params",
+      "type": "object"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "simulation_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Simulation Ref"
+    },
+    "requested_by": {
+      "title": "Requested By",
+      "type": "string"
+    },
+    "issued_at": {
+      "title": "Issued At",
+      "type": "string"
+    },
+    "expires_at": {
+      "title": "Expires At",
+      "type": "string"
+    },
+    "revert_after_s": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revert After S"
+    },
+    "signature": {
+      "title": "Signature",
+      "type": "string"
+    },
+    "key_id": {
+      "title": "Key Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "cmd_id",
+    "site_id",
+    "gateway_id",
+    "asset_id",
+    "type",
+    "class",
+    "reason",
+    "requested_by",
+    "issued_at",
+    "expires_at",
+    "signature",
+    "key_id"
+  ],
+  "title": "CommandMessage",
+  "type": "object"
+}

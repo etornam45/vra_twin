@@ -1,0 +1,75 @@
+type: pv_inverter
+manufacturer: ExampleInv
+model: EI-50K
+config:
+  rated_ac_kw: 50.0
+  mppt_count: 2
+  max_dc_v: 1000.0
+  curtailment_support: true
+expected_tags:
+  - p_ac
+  - v_ac
+  - f_ac
+  - p_dc
+  - e_today
+registers:
+  - asset: PV_INV_01
+    tag: p_ac
+    register: 100
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: kW
+    sign: as_is
+    class: standard
+    min: 0.0
+    max: 60.0
+    writable: false
+  - asset: PV_INV_01
+    tag: v_ac
+    register: 101
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: V
+    sign: as_is
+    class: standard
+    min: 180.0
+    max: 270.0
+    writable: false
+  - asset: PV_INV_01
+    tag: f_ac
+    register: 102
+    function: holding
+    type: uint16
+    scale: 0.01
+    unit: Hz
+    sign: as_is
+    class: fast
+    min: 45.0
+    max: 55.0
+    writable: false
+  - asset: PV_INV_01
+    tag: p_dc
+    register: 103
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: kW
+    sign: as_is
+    class: standard
+    min: 0.0
+    max: 70.0
+    writable: false
+  - asset: PV_INV_01
+    tag: e_today
+    register: 104
+    function: holding
+    type: uint16
+    scale: 0.1
+    unit: kWh
+    sign: as_is
+    class: slow
+    min: 0.0
+    max: 1000.0
+    writable: false

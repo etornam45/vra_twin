@@ -1,0 +1,84 @@
+{
+  "additionalProperties": false,
+  "description": "Gateway heartbeat / health status report.",
+  "properties": {
+    "schema": {
+      "const": "gateway.health/1.0",
+      "default": "gateway.health/1.0",
+      "title": "Schema",
+      "type": "string"
+    },
+    "gateway_id": {
+      "title": "Gateway Id",
+      "type": "string"
+    },
+    "ts": {
+      "title": "Ts",
+      "type": "string"
+    },
+    "boot_id": {
+      "title": "Boot Id",
+      "type": "string"
+    },
+    "uptime_s": {
+      "title": "Uptime S",
+      "type": "integer"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "cfg_version": {
+      "title": "Cfg Version",
+      "type": "string"
+    },
+    "link": {
+      "additionalProperties": true,
+      "title": "Link",
+      "type": "object"
+    },
+    "queue": {
+      "additionalProperties": true,
+      "title": "Queue",
+      "type": "object"
+    },
+    "store": {
+      "additionalProperties": true,
+      "title": "Store",
+      "type": "object"
+    },
+    "adapters": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Adapters",
+      "type": "array"
+    },
+    "clock": {
+      "additionalProperties": true,
+      "title": "Clock",
+      "type": "object"
+    },
+    "host": {
+      "additionalProperties": true,
+      "title": "Host",
+      "type": "object"
+    }
+  },
+  "required": [
+    "gateway_id",
+    "ts",
+    "boot_id",
+    "uptime_s",
+    "version",
+    "cfg_version",
+    "link",
+    "queue",
+    "store",
+    "clock",
+    "host"
+  ],
+  "title": "GatewayHealth",
+  "type": "object"
+}

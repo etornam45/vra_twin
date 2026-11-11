@@ -1,0 +1,50 @@
+type: pcs
+manufacturer: ExampleInv
+model: EI-GF50
+config:
+  rated_kva: 50.0
+  rated_kw: 50.0
+  grid_forming: true
+  droop_support: true
+  remote_setpoints_allowed: false
+expected_tags:
+  - p_ac
+  - q_ac
+  - mode
+registers:
+  - asset: PCS_01
+    tag: p_ac
+    register: 300
+    function: holding
+    type: int16
+    scale: 0.1
+    unit: kW
+    sign: as_is
+    class: fast
+    min: -50.0
+    max: 50.0
+    writable: false
+  - asset: PCS_01
+    tag: q_ac
+    register: 301
+    function: holding
+    type: int16
+    scale: 0.1
+    unit: kvar
+    sign: as_is
+    class: standard
+    min: -30.0
+    max: 30.0
+    writable: false
+  - asset: PCS_01
+    tag: mode
+    register: 302
+    function: holding
+    type: uint16
+    scale: 1.0
+    unit: ""
+    sign: as_is
+    class: standard
+    min: 0.0
+    max: 5.0
+    writable: false

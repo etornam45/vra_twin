@@ -1,0 +1,86 @@
+{
+  "additionalProperties": false,
+  "description": "Command execution result returned by gateway.",
+  "properties": {
+    "schema": {
+      "const": "command.result/1.0",
+      "default": "command.result/1.0",
+      "title": "Schema",
+      "type": "string"
+    },
+    "cmd_id": {
+      "title": "Cmd Id",
+      "type": "string"
+    },
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "gateway_id": {
+      "title": "Gateway Id",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "RECEIVED",
+        "REJECTED",
+        "EXPIRED",
+        "APPLYING",
+        "APPLIED",
+        "FAILED",
+        "CONFIRMED"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "applied_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Applied At"
+    },
+    "readback": {
+      "additionalProperties": true,
+      "title": "Readback",
+      "type": "object"
+    },
+    "finished_ms": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Finished Ms"
+    }
+  },
+  "required": [
+    "cmd_id",
+    "site_id",
+    "gateway_id",
+    "state"
+  ],
+  "title": "CommandResult",
+  "type": "object"
+}

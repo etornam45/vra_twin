@@ -1,0 +1,150 @@
+{
+  "$defs": {
+    "AssetConnections": {
+      "additionalProperties": false,
+      "properties": {
+        "bus_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bus Id"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent"
+        },
+        "children": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Children",
+          "type": "array"
+        }
+      },
+      "title": "AssetConnections",
+      "type": "object"
+    },
+    "AssetIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "manufacturer": {
+          "title": "Manufacturer",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "serial": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Serial"
+        },
+        "commissioned_on": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commissioned On"
+        },
+        "firmware": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Firmware"
+        }
+      },
+      "required": [
+        "manufacturer",
+        "model"
+      ],
+      "title": "AssetIdentity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Generic asset contract.",
+  "properties": {
+    "asset_id": {
+      "title": "Asset Id",
+      "type": "string"
+    },
+    "asset_type": {
+      "enum": [
+        "bess",
+        "pv_array",
+        "pv_inverter",
+        "pcs",
+        "meter",
+        "feeder",
+        "load_group",
+        "weather_station",
+        "genset",
+        "gateway"
+      ],
+      "title": "Asset Type",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "identity": {
+      "$ref": "#/$defs/AssetIdentity"
+    },
+    "config": {
+      "additionalProperties": true,
+      "title": "Config",
+      "type": "object"
+    },
+    "connections": {
+      "$ref": "#/$defs/AssetConnections"
+    },
+    "revision": {
+      "default": 1,
+      "title": "Revision",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "asset_id",
+    "asset_type",
+    "name",
+    "identity",
+    "config"
+  ],
+  "title": "AssetDefinition",
+  "type": "object"
+}
