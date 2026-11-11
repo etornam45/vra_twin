@@ -1,7 +1,7 @@
 .PHONY: test validate schemas e2e run-scada clean
 
 test:
-	PYTHONPATH=. .venv/bin/pytest contracts/tests/ gateway/tests/
+	PYTHONPATH=. .venv/bin/pytest contracts/tests/ gateway/tests/ backend/tests/ twin/tests/
 
 validate:
 	.venv/bin/python3 vra-validate.py validate sites/VLK-ISL-001
