@@ -50,6 +50,14 @@ class GatewayConfig(BaseContract):
     downsample_pressure_pct: float = Field(70.0, ge=50.0, le=95.0)
     drop_pressure_pct: float = Field(95.0, ge=80.0, le=99.0)
 
+    @model_validator(mode="after")
+    def validate_pressure_thresholds(self) -> "GatewayConfig":
+        if self.downsample_pressure_pct >= self.drop_pressure_pct:
+            raise ValueError(
+                "downsample_pressure_pct must be below drop_pressure_pct"
+            )
+        return self
+
 
 class SiteAssetEntry(BaseContract):
     type: str

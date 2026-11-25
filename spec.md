@@ -130,7 +130,7 @@ L1 Physical         PV · battery · inverters · meters · loads · weather sen
 | `vra/{site}/cmd/{gw}` | down | 1 | Signed commands |
 | `vra/{site}/config/{gw}` | down | 1, retained | Config update notices |
 
-**REST (indicative):** `/v1/sites`, `/v1/sites/{id}/assets`, `/state`, `/events`, `/kpis`, `/forecasts`, `/health`, `/v1/timeseries?site&asset&tag&from&to&agg`, `POST /v1/simulations`, `POST /v1/commands`, and `WS /v1/stream/sites/{id}`.
+**REST (indicative):** `/v1/sites`, `/v1/sites/{id}/assets`, `/state`, `/events`, `/kpis`, `/forecasts`, `/health`, `/v1/timeseries?site&asset&tag&from&to&agg`, `POST /v1/simulations`, `POST /v1/commands`, and `WS /v1/stream/sites/{id}`. The current prototype also exposes a read-only `/v1/sites/{id}/dashboard` snapshot.
 
 ### 2.6 Data lifecycle
 
@@ -356,14 +356,21 @@ MQTT settings: fixed `client_id = gateway_id`; `clean_start=false`; session expi
 
 ### 3.8 Disk pressure and gaps
 
-| Disk use (of budget) | Action |
-|---|---|
-| < 70 % | Normal |
-| 70–85 % | Downsample oldest pending telemetry to 1-min aggregates; record lineage |
-| 85–95 % | Downsample to 5-min; stop retaining acked rows; event `gateway_disk_pressure` |
-| > 95 % | Drop oldest pending telemetry with exact `data_gaps` ranges |
+The prototype compares `disk_budget_mb` to pending/inflight outbox payload bytes (not
+the full SQLite file, WAL, or filesystem use). It does not discard already-buffered
+telemetry; backlog shedding and 1-/5-minute aggregation remain future work.
 
-**Never dropped:** alarms/events, command results, gap markers. Other gap causes also produce markers: `adapter_down`, `gateway_down` (boot id change), `clock_jump`.
+| Pending outbox use | Action |
+|---|---|
+| Below `downsample_pressure_pct` (default 70 %) | Apply each mapping's deadband and `max_interval_s` refresh |
+| At/above downsample threshold, below `drop_pressure_pct` (default 95 %) | Double deadband and maximum interval; coalesce omitted eligible samples into a `data_gap` event |
+| At/above drop threshold | Stop queuing eligible telemetry samples; persist coalesced per-tag `data_gap` intervals |
+| Pressure recovers below drop threshold | Queue unreported gap events in the reliable events outbox |
+
+Gap events have their own stream sequence, are committed to the local outbox before
+delivery, and are marked reported atomically with that outbox insert. The backend
+persists the event before acknowledging its sequence. Other gap causes such as
+`adapter_down`, `gateway_down` (boot id change), and `clock_jump` remain planned.
 
 ### 3.9 Backend obligations (ingestion contract)
 Validate batch envelope and array lengths (vectorised, not per-sample objects); dedupe with `ON CONFLICT DO NOTHING`; **commit before ack**; reject with a reason so the gateway can quarantine; store by device time; never let older samples overwrite live state; treat `data_gap` events as authoritative for completeness KPIs; correct or flag unsynced clocks; acks are safe to repeat; request resend if a sequence is missing for too long.
@@ -526,6 +533,12 @@ Roles: `viewer`, `installer`, `admin`.
 ### 4.7 SSH and CLI (always available)
 Key-only SSH for named admins. `gw status | queue | tags [--asset X] | devices test | config validate | config apply | config versions | config revert <v> | enrol --token T | uplink test | replay --dry-run | logs --follow | support-bundle`. Editing `/etc/vra/*.yaml` then `gw config apply` is equivalent to using the UI.
 
+### 4.8 Central dashboard prototype
+
+The repository includes an initial read-only operator dashboard served by the central FastAPI application at `/dashboard`. It supports site selection, latest telemetry-ingest age (not heartbeat-derived link health), asset health/freshness, recent events, latest telemetry with quality and timestamps, a 1/6/24-hour signal chart, and available live-twin power balance and battery SOC/SOH values. It refreshes every 15 seconds and has no command controls.
+
+The dashboard uses same-origin static HTML/CSS/JavaScript and SQLite by default; setting `DATABASE_URL` selects the PostgreSQL/TimescaleDB repository. It distinguishes missing data from measured zero and labels the illustrative pilot configuration. This is a UI prototype only: authentication/RBAC, TLS deployment, fleet map, configurable operational KPIs, reporting, and VRA-specific thresholds remain outstanding. Run locally with `make run-dashboard`; the service binds to loopback by default. See [web/README.md](./web/README.md).
+
 ---
 
 ## 5. Component Model, Validation and Schemas
@@ -675,7 +688,7 @@ BESS_01,p_dc,40014,holding,int16,0.1,kW,invert,standard,-60,60,false
 
 **Model parameters** (`model_params.yaml`, produced by calibration, versioned, with `fit_quality`):
 - `pv.pvlib_sd`: capacity, gamma, NOCT, baseline performance ratio, soiling, mismatch, clipping, degradation.
-- `battery.ecm_ageing`: current capacity (from reference test), OCV–SOC curve, R0, RC pairs, charge/discharge efficiency, thermal model, **ageing** (calendar: √time with Arrhenius and SOC stress; cycle: power law in DoD with C-rate and temperature stress), EOL SOH 70 %, SOH estimator (capacity/throughput EKF).
+- `battery.ecm_ageing`: intended full model includes current capacity (from reference test), OCV–SOC curve, R0, RC pairs, charge/discharge efficiency, thermal model, and an SOH estimator. The current prototype implements SOC tracking and illustrative ageing only: calendar fade is linear in elapsed time with a configurable Q10 temperature factor; cycle fade is linear in equivalent full cycles. Defaults are uncalibrated assumptions, not vendor or VRA parameters. DoD/C-rate-dependent ageing, an electrochemical/thermal model, and capacity-test-based SOH estimation remain future work.
 - `inverter.eff_curve`: efficiency points, standby loss.
 - `load.profile_growth`: 48-point day profiles (weekday/weekend), base peak kW, seasonality (harmattan/rainy), noise, growth (annual %, new connections, kW per connection).
 
@@ -794,6 +807,9 @@ Per-asset health indices (battery SOH, inverter derating events, PV PR trend, so
 ### 6.8 Forecasting
 PV: clear-sky index + NWP irradiance + local measurements; persistence baseline → gradient boosting. Load: profile-based with calendar and weather features, per site. Evaluate with MAE/MAPE/RMSE and **skill against persistence**.
 
+### 6.9 Analytics implementation status
+The prototype includes an explicitly uncalibrated persistence forecast API and threshold-configured diagnostics for stale assets, active alarms, battery SOC residuals, PV underperformance residuals, and energy-balance mismatch. Calibration utilities report battery SOC MAE/RMSE/max error and a measured-data PV instantaneous performance-ratio diagnostic. They do not fit or update model parameters automatically. Thresholds must be supplied by an authorized engineering study; no VRA limits are assumed. Forecast and calibration claims require measured, quality-screened site history and a held-out evaluation before operational use.
+
 ---
 
 ## 7. Repository Structure
@@ -825,7 +841,7 @@ vra-island-twin/
 │   ├── src/vra_twin/                   # state.py sim.py diagnostics.py forecast.py calibrate.py om.py models/{pv,battery,inverter,load,dispatch}.py
 │   ├── notebooks/
 │   └── tests/
-├── web/                                # Next.js dashboard
+├── web/                                # central read-only dashboard prototype
 ├── sites/
 │   ├── _catalog/{equipment,registers}/ # reusable equipment + register maps
 │   ├── _templates/solar_bess_basic/

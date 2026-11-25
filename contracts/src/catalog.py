@@ -18,6 +18,8 @@ class RegisterMapEntry(BaseContract):
     tag_class: TagClass = Field(TagClass.STANDARD, alias="class")
     min_val: Optional[float] = Field(None, alias="min")
     max_val: Optional[float] = Field(None, alias="max")
+    deadband: float = Field(0.0, ge=0.0, description="Minimum value change before a sample is emitted")
+    max_interval_s: int = Field(60, ge=1, description="Maximum time between emitted samples")
     writable: bool = False
 
 

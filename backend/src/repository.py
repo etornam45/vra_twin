@@ -12,7 +12,7 @@ Implements:
 import json
 import sqlite3
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -168,9 +168,27 @@ class BackendRepository:
         with self._get_connection() as conn:
             conn.executescript(SQLITE_INIT_SQL)
 
+    def encode_json(self, value: Any) -> Any:
+        return json.dumps(value)
+
+    def adapt_timestamp(self, value: Any) -> Any:
+        if value is None or isinstance(value, datetime):
+            return value
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        else:
+            parsed = parsed.astimezone(timezone.utc)
+        return parsed.isoformat()
+
+    @staticmethod
+    def decode_json(value: Any) -> Any:
+        return json.loads(value) if isinstance(value, str) else value
+
     # Site & Registry methods
     def register_site(self, site_id: str, name: str, lat: float, lon: float, gateway_id: str, tz_name: str = "Africa/Accra"):
         now_iso = datetime.now(timezone.utc).isoformat()
+        now_value = self.adapt_timestamp(now_iso)
         with self._get_connection() as conn:
             conn.execute(
                 """
@@ -183,7 +201,7 @@ class BackendRepository:
                     gateway_id=excluded.gateway_id,
                     updated_at=excluded.updated_at
                 """,
-                (site_id, name, tz_name, lat, lon, gateway_id, now_iso, now_iso)
+                (site_id, name, tz_name, lat, lon, gateway_id, now_value, now_value)
             )
             conn.execute(
                 """
@@ -191,7 +209,7 @@ class BackendRepository:
                 VALUES (?, ?, 'offline', ?)
                 ON CONFLICT(gateway_id) DO NOTHING
                 """,
-                (gateway_id, site_id, now_iso)
+                (gateway_id, site_id, now_value)
             )
             conn.commit()
 
@@ -208,7 +226,7 @@ class BackendRepository:
                     connections=excluded.connections,
                     revision=excluded.revision
                 """,
-                (site_id, asset_id, asset_type, name, json.dumps(config), json.dumps(connections), revision)
+                (site_id, asset_id, asset_type, name, self.encode_json(config), self.encode_json(connections), revision)
             )
             conn.commit()
 
@@ -222,6 +240,7 @@ class BackendRepository:
         3. Commits transaction atomically before caller generates Selective ACK.
         """
         now_iso = datetime.now(timezone.utc).isoformat()
+        now_value = self.adapt_timestamp(now_iso)
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -245,7 +264,9 @@ class BackendRepository:
                     sample_ms = batch.t0_ms + t_offset
                     t_first_ms = min(t_first_ms, sample_ms)
                     t_last_ms = max(t_last_ms, sample_ms)
-                    sample_iso = datetime.fromtimestamp(sample_ms / 1000.0, tz=timezone.utc).isoformat()
+                    sample_iso = self.adapt_timestamp(
+                        datetime.fromtimestamp(sample_ms / 1000.0, tz=timezone.utc).isoformat()
+                    )
 
                     telemetry_rows.append((
                         sample_iso,
@@ -259,7 +280,7 @@ class BackendRepository:
                         None,
                         None,
                         1,
-                        now_iso,
+                        now_value,
                         batch.seq
                     ))
 
@@ -270,7 +291,7 @@ class BackendRepository:
                     gateway_id, stream, seq, site_id, n_samples, t_first_ms, t_last_ms, received_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (batch.gateway_id, batch.stream, batch.seq, batch.site_id, total_samples, t_first_ms, t_last_ms, now_iso)
+                (batch.gateway_id, batch.stream, batch.seq, batch.site_id, total_samples, t_first_ms, t_last_ms, now_value)
             )
 
             # Insert telemetry points
@@ -289,7 +310,7 @@ class BackendRepository:
             # Update gateway last_seen_at
             cursor.execute(
                 "UPDATE gateways SET last_seen_at = ?, status = 'online' WHERE gateway_id = ?",
-                (now_iso, batch.gateway_id)
+                (now_value, batch.gateway_id)
             )
 
             conn.commit()
@@ -306,15 +327,20 @@ class BackendRepository:
     ) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            query = "SELECT ts, site_id, asset_id, tag, value_num, quality FROM telemetry WHERE site_id = ? AND asset_id = ? AND tag = ?"
+            timestamp_expression = "ts"
+            timestamp_bound = "?"
+            query = (
+                "SELECT ts, site_id, asset_id, tag, value_num, quality FROM telemetry "
+                "WHERE site_id = ? AND asset_id = ? AND tag = ?"
+            )
             params = [site_id, asset_id, tag]
             if from_ts:
-                query += " AND ts >= ?"
-                params.append(from_ts)
+                query += f" AND {timestamp_expression} >= {timestamp_bound}"
+                params.append(self.adapt_timestamp(from_ts))
             if to_ts:
-                query += " AND ts <= ?"
-                params.append(to_ts)
-            query += " ORDER BY ts ASC LIMIT ?"
+                query += f" AND {timestamp_expression} <= {timestamp_bound}"
+                params.append(self.adapt_timestamp(to_ts))
+            query = f"SELECT * FROM ({query} ORDER BY ts DESC LIMIT ?) AS recent_points ORDER BY ts ASC"
             params.append(limit)
 
             cursor.execute(query, params)
@@ -342,15 +368,16 @@ class BackendRepository:
                     event.code,
                     event.severity,
                     event.message,
-                    event.ts,
-                    event.cleared_ts,
-                    json.dumps(event.context)
+                    self.adapt_timestamp(event.ts),
+                    self.adapt_timestamp(event.cleared_ts) if event.cleared_ts else None,
+                    self.encode_json(event.context)
                 )
             )
             conn.commit()
 
     def update_twin_state(self, state: SiteTwinState):
         now_iso = datetime.now(timezone.utc).isoformat()
+        now_value = self.adapt_timestamp(now_iso)
         with self._get_connection() as conn:
             conn.execute(
                 """
@@ -363,7 +390,14 @@ class BackendRepository:
                     state=excluded.state,
                     updated_at=excluded.updated_at
                 """,
-                (state.site_id, state.asof, state.mode, state.link_state, state.model_dump_json(), now_iso)
+                (
+                    state.site_id,
+                    self.adapt_timestamp(state.asof),
+                    state.mode,
+                    state.link_state,
+                    self.encode_json(state.model_dump()),
+                    now_value,
+                )
             )
             conn.commit()
 
@@ -373,5 +407,174 @@ class BackendRepository:
             cursor.execute("SELECT state FROM twin_state WHERE site_id = ?", (site_id,))
             row = cursor.fetchone()
             if row:
-                return json.loads(row["state"])
+                return self.decode_json(row["state"])
             return None
+
+    def get_dashboard_data(self, site_id: str) -> Optional[Dict[str, Any]]:
+        """Return a read-only dashboard snapshot for one registered site."""
+        now = datetime.now(timezone.utc)
+        day_ago = self.adapt_timestamp((now - timedelta(days=1)).isoformat())
+        with self._get_connection() as conn:
+            site_row = conn.execute(
+                "SELECT * FROM sites WHERE site_id = ?", (site_id,)
+            ).fetchone()
+            if site_row is None:
+                return None
+
+            gateway_row = conn.execute(
+                "SELECT * FROM gateways WHERE site_id = ? ORDER BY last_seen_at DESC LIMIT 1",
+                (site_id,)
+            ).fetchone()
+            asset_rows = conn.execute(
+                "SELECT asset_id, asset_type, name, manufacturer, model, config, connections, revision "
+                "FROM assets WHERE site_id = ? ORDER BY asset_id",
+                (site_id,)
+            ).fetchall()
+            latest_rows = conn.execute(
+                """
+                SELECT asset_id, tag, value_num, value_txt, quality, resolution, ts, recv_ts
+                FROM (
+                    SELECT asset_id, tag, value_num, value_txt, quality, resolution, ts, recv_ts,
+                           ROW_NUMBER() OVER (PARTITION BY asset_id, tag ORDER BY ts DESC) AS row_num
+                    FROM telemetry
+                    WHERE site_id = ?
+                ) AS latest_telemetry
+                WHERE row_num = 1
+                ORDER BY asset_id, tag
+                """,
+                (site_id,)
+            ).fetchall()
+            event_rows = conn.execute(
+                "SELECT event_id, kind, asset_id, code, severity, message, ts, cleared_ts, context "
+                "FROM events WHERE site_id = ? ORDER BY ts DESC LIMIT 20",
+                (site_id,)
+            ).fetchall()
+            sample_count = conn.execute(
+                "SELECT COUNT(*) AS sample_count FROM telemetry WHERE site_id = ? AND ts >= ?",
+                (site_id, day_ago)
+            ).fetchone()["sample_count"]
+            last_telemetry_row = conn.execute(
+                "SELECT MAX(ts) AS last_telemetry_at FROM telemetry WHERE site_id = ?",
+                (site_id,)
+            ).fetchone()
+            twin_row = conn.execute(
+                "SELECT state FROM twin_state WHERE site_id = ?", (site_id,)
+            ).fetchone()
+
+            events = [dict(row) for row in event_rows]
+            for event in events:
+                event["context"] = self.decode_json(event["context"] or "{}")
+
+            return {
+                "site": dict(site_row),
+                "gateway": dict(gateway_row) if gateway_row else None,
+                "assets": [dict(row) for row in asset_rows],
+                "latest_readings": [dict(row) for row in latest_rows],
+                "recent_events": events,
+                "telemetry_samples_24h": sample_count,
+                "last_telemetry_at": last_telemetry_row["last_telemetry_at"],
+                "twin_state": self.decode_json(twin_row["state"]) if twin_row else None,
+                "snapshot_at": now.isoformat(),
+            }
+
+
+class _PostgresCursor:
+    def __init__(self, cursor: Any):
+        self._cursor = cursor
+
+    @staticmethod
+    def _postgres_placeholders(query: str) -> str:
+        return query.replace("?", "%s")
+
+    def execute(self, query: str, params: Any = None) -> "_PostgresCursor":
+        self._cursor.execute(self._postgres_placeholders(query), params)
+        return self
+
+    def executemany(self, query: str, params: Any) -> "_PostgresCursor":
+        self._cursor.executemany(self._postgres_placeholders(query), params)
+        return self
+
+    def fetchone(self) -> Any:
+        return self._cursor.fetchone()
+
+    def fetchall(self) -> Any:
+        return self._cursor.fetchall()
+
+
+class _PostgresConnection:
+    def __init__(self, connection: Any):
+        self._connection = connection
+
+    def __enter__(self) -> "_PostgresConnection":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        try:
+            if exc_type is None:
+                self._connection.commit()
+            else:
+                self._connection.rollback()
+        finally:
+            self._connection.close()
+
+    def cursor(self) -> _PostgresCursor:
+        return _PostgresCursor(self._connection.cursor())
+
+    def execute(self, query: str, params: Any = None) -> _PostgresCursor:
+        cursor = self.cursor()
+        cursor.execute(query, params)
+        return cursor
+
+    def executemany(self, query: str, params: Any) -> _PostgresCursor:
+        cursor = self.cursor()
+        cursor.executemany(query, params)
+        return cursor
+
+    def executescript(self, script: str) -> None:
+        self._connection.execute(script, prepare=False)
+
+    def commit(self) -> None:
+        self._connection.commit()
+
+
+class PostgresBackendRepository(BackendRepository):
+    """PostgreSQL/TimescaleDB repository using the shared backend operations."""
+
+    def __init__(self, database_url: str):
+        self.database_url = database_url
+        self._init_db()
+
+    def _get_connection(self) -> _PostgresConnection:
+        try:
+            import psycopg
+            from psycopg.rows import dict_row
+        except ImportError as exc:
+            raise RuntimeError(
+                "PostgreSQL support requires psycopg; install the project requirements"
+            ) from exc
+        return _PostgresConnection(
+            psycopg.connect(self.database_url, row_factory=dict_row)
+        )
+
+    def _init_db(self) -> None:
+        migration_path = Path(__file__).resolve().parents[1] / "migrations" / "001_init_tables.sql"
+        with self._get_connection() as conn:
+            conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
+            conn.executescript(migration_path.read_text(encoding="utf-8"))
+
+    def encode_json(self, value: Any) -> Any:
+        try:
+            from psycopg.types.json import Jsonb
+        except ImportError as exc:
+            raise RuntimeError(
+                "PostgreSQL support requires psycopg; install the project requirements"
+            ) from exc
+        return Jsonb(value)
+
+    def adapt_timestamp(self, value: Any) -> Any:
+        if value is None or isinstance(value, datetime):
+            return value
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)

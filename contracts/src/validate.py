@@ -89,6 +89,7 @@ def export_all_json_schemas(output_dir: Path):
     """Exports JSON Schemas for all core contracts."""
     import json
     from .messages import TelemetryBatch, SelectiveAck, EventMessage, GatewayHealth, CommandMessage, CommandResult
+    from .catalog import RegisterMapEntry
     from .assets import AssetDefinition, BessConfig
     from .twin import SiteTwinState
     from .config import SiteConfig, GatewayConfig
@@ -104,7 +105,8 @@ def export_all_json_schemas(output_dir: Path):
         ("bess_config", BessConfig),
         ("site_twin_state", SiteTwinState),
         ("site_config", SiteConfig),
-        ("gateway_config", GatewayConfig)
+        ("gateway_config", GatewayConfig),
+        ("register_map_entry", RegisterMapEntry)
     ]
 
     output_dir.mkdir(parents=True, exist_ok=True)

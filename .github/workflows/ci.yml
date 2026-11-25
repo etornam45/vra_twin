@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    services:
+      timescaledb:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_DB: vra_twin
+          POSTGRES_USER: vra
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vra -d vra_twin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://vra:ci-only-password@localhost:5432/vra_twin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: sudo apt-get update && sudo apt-get install -y mosquitto
+      - run: python -m pip install -r requirements.txt
+      - run: make test VENV="$(python -c 'import sys; print(sys.prefix)')"
+      - run: make validate VENV="$(python -c 'import sys; print(sys.prefix)')"
+      - run: node --check web/assets/dashboard.js
+      - run: git diff --check

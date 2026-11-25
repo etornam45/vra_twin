@@ -1,8 +1,11 @@
+import json
 import pytest
 from pathlib import Path
 from contracts.src.common import QualityCode, SignConvention
 from contracts.src.messages import TelemetryBatch, SeriesColumn, SelectiveAck
 from contracts.src.assets import BessConfig
+from contracts.src.config import GatewayConfig, UplinkConfig
+from contracts.src.catalog import RegisterMapEntry
 from contracts.src.validate import validate_site_directory, export_all_json_schemas
 
 
@@ -83,3 +86,29 @@ def test_export_json_schemas(tmp_path):
     export_all_json_schemas(tmp_path)
     exported_files = list(tmp_path.glob("*.json"))
     assert len(exported_files) >= 8
+    schema = tmp_path / "register_map_entry.json"
+    assert schema.exists()
+    properties = json.loads(schema.read_text())["properties"]
+    assert "deadband" in properties
+    assert "max_interval_s" in properties
+
+
+def test_gateway_disk_pressure_thresholds_are_ordered():
+    uplink = UplinkConfig(broker="localhost", port=1883, use_tls=False)
+    with pytest.raises(ValueError, match="downsample_pressure_pct must be below"):
+        GatewayConfig(
+            gateway="GW-VLK-001",
+            uplink=uplink,
+            downsample_pressure_pct=90,
+            drop_pressure_pct=90
+        )
+
+    entry = RegisterMapEntry(
+        asset="BESS_01",
+        tag="soc",
+        register=200,
+        deadband=0.2,
+        max_interval_s=60
+    )
+    assert entry.deadband == 0.2
+    assert entry.max_interval_s == 60

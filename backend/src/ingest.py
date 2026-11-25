@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 import zstandard as zstd
 
-from contracts.src.messages import TelemetryBatch, SelectiveAck, SelectiveAckReject
+from contracts.src.messages import EventMessage, TelemetryBatch, SelectiveAck, SelectiveAckReject
 from backend.src.repository import BackendRepository
 
 
@@ -89,5 +89,52 @@ class IngestionService:
                 gateway_id=batch.gateway_id,
                 ranges=[],
                 rejected=[SelectiveAckReject(seq=batch.seq, reason="unhandled_db_exception", detail=str(e))],
+                committed_at=now_iso
+            )
+
+    def process_raw_event_payload(self, payload_bytes: bytes) -> SelectiveAck:
+        """Persist a single event before acknowledging its stream sequence."""
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            event = EventMessage.model_validate_json(payload_bytes)
+        except Exception as e:
+            return SelectiveAck(
+                site_id="UNKNOWN",
+                gateway_id="UNKNOWN",
+                stream="events",
+                ranges=[],
+                rejected=[
+                    SelectiveAckReject(
+                        seq=0,
+                        reason="event_validation_error",
+                        detail=str(e)
+                    )
+                ],
+                committed_at=now_iso
+            )
+
+        try:
+            self.repo.record_event(event)
+            return SelectiveAck(
+                site_id=event.site_id,
+                gateway_id=event.gateway_id,
+                stream="events",
+                ranges=[(event.seq, event.seq)],
+                rejected=[],
+                committed_at=now_iso
+            )
+        except Exception as e:
+            return SelectiveAck(
+                site_id=event.site_id,
+                gateway_id=event.gateway_id,
+                stream="events",
+                ranges=[],
+                rejected=[
+                    SelectiveAckReject(
+                        seq=event.seq,
+                        reason="event_db_insert_failed",
+                        detail=str(e)
+                    )
+                ],
                 committed_at=now_iso
             )

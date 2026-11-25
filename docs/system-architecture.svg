@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1180" viewBox="0 0 1800 1180" role="img" aria-labelledby="title description">
+  <title id="title">VRA Volta Lake mini-grid digital twin: prototype architecture and progress</title>
+  <desc id="description">Architecture diagram distinguishing code implemented in the repository from the still-unconnected end-to-end path and planned production services.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#46617d"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#c44747"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; fill: #172b4d; }
+      .title { font-size: 34px; font-weight: 750; letter-spacing: .2px; }
+      .subtitle { font-size: 17px; fill: #52657d; }
+      .lane-title { font-size: 18px; font-weight: 750; letter-spacing: .7px; }
+      .box-title { font-size: 17px; font-weight: 700; }
+      .body { font-size: 14px; fill: #344a63; }
+      .small { font-size: 12px; fill: #52657d; }
+      .tiny { font-size: 11px; fill: #52657d; }
+      .white { fill: #fff; }
+      .panel { fill: #fff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .implemented { fill: #e8f5ee; stroke: #48a276; stroke-width: 1.7; }
+      .prototype { fill: #fff5df; stroke: #d29a32; stroke-width: 1.7; }
+      .planned { fill: #f0f3f7; stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 7 5; }
+      .gap { fill: none; stroke: #c44747; stroke-width: 2.5; stroke-dasharray: 8 7; }
+      .flow { fill: none; stroke: #46617d; stroke-width: 2.2; marker-end: url(#arrow); }
+      .flow-dashed { fill: none; stroke: #8797aa; stroke-width: 2; stroke-dasharray: 7 6; marker-end: url(#arrow); }
+      .flow-gap { fill: none; stroke: #c44747; stroke-width: 2.5; stroke-dasharray: 8 7; marker-end: url(#arrow-red); }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1180" fill="#f5f7fb"/>
+  <text x="42" y="58" class="title">VRA VOLTA LAKE MINI-GRID DIGITAL TWIN</text>
+  <text x="44" y="89" class="subtitle">Prototype architecture &amp; progress baseline · November 2026 · code checked against the latest weekly presentation</text>
+
+  <g transform="translate(1135 35)">
+    <rect x="0" y="0" width="190" height="32" rx="16" fill="#e8f5ee" stroke="#48a276"/>
+    <circle cx="18" cy="16" r="6" fill="#319567"/>
+    <text x="32" y="21" class="small">Implemented in repo</text>
+    <rect x="202" y="0" width="190" height="32" rx="16" fill="#fff5df" stroke="#d29a32"/>
+    <circle cx="220" cy="16" r="6" fill="#c88716"/>
+    <text x="234" y="21" class="small">Prototype / in progress</text>
+    <rect x="404" y="0" width="190" height="32" rx="16" fill="#f0f3f7" stroke="#94a3b8" stroke-dasharray="5 3"/>
+    <circle cx="422" cy="16" r="6" fill="#8392a5"/>
+    <text x="436" y="21" class="small">Planned / not deployed</text>
+  </g>
+
+  <rect x="36" y="126" width="512" height="718" rx="18" class="panel"/>
+  <rect x="566" y="126" width="188" height="718" rx="18" class="panel"/>
+  <rect x="772" y="126" width="992" height="718" rx="18" class="panel"/>
+  <text x="58" y="160" class="lane-title">ISLAND / SIMULATED PILOT</text>
+  <text x="587" y="160" class="lane-title">UPLINK</text>
+  <text x="798" y="160" class="lane-title">CENTRAL PROTOTYPE</text>
+
+  <rect x="58" y="181" width="468" height="112" rx="12" class="planned"/>
+  <text x="78" y="208" class="box-title">Physical mini-grid assets</text>
+  <text x="78" y="234" class="body">PV · LFP battery · inverter / PCS · meter · loads</text>
+  <text x="78" y="258" class="small">Pilot definition: VLK-ISL-001 (illustrative configuration)</text>
+  <text x="78" y="278" class="tiny">No live VRA SCADA readings or selected field site supplied yet</text>
+
+  <path d="M292 293 L292 311" class="flow-dashed"/>
+  <rect x="58" y="316" width="468" height="94" rx="12" class="prototype"/>
+  <text x="78" y="344" class="box-title">SCADA / Modbus TCP simulator</text>
+  <text x="78" y="370" class="body">tools/scada_sim/server.py · simulated device registers</text>
+  <text x="78" y="392" class="small">Test substitute for the field SCADA, not a live site connection</text>
+
+  <path d="M292 410 L292 427" class="flow"/>
+  <rect x="58" y="432" width="468" height="95" rx="12" class="implemented"/>
+  <text x="78" y="460" class="box-title">Edge gateway · Modbus adapter</text>
+  <text x="78" y="486" class="body">Polling · register mapping · scale / sign conversion · quality flags</text>
+  <text x="78" y="509" class="small">gateway/src/adapters/modbus_tcp.py · site mapping/config</text>
+
+  <path d="M292 527 L292 544" class="flow"/>
+  <rect x="58" y="549" width="468" height="116" rx="12" class="implemented"/>
+  <text x="78" y="577" class="box-title">Encode &amp; persist before send</text>
+  <text x="78" y="603" class="body">Columnar zstd batch → SQLite outbox → sequence / retry / ACK state</text>
+  <text x="78" y="626" class="small">TelemetryEncoder + GatewayStorage · local durable queue</text>
+  <text x="78" y="648" class="tiny">Component tests cover storage, encoding, replay and selective ACK logic</text>
+
+  <path d="M292 665 L292 683" class="flow"/>
+  <rect x="58" y="688" width="468" height="123" rx="12" class="prototype"/>
+  <text x="78" y="717" class="box-title">MQTT 5 forwarder · uplink code present</text>
+  <text x="78" y="743" class="body">Publishes queued batches; listens for selective ACKs; replays after reconnect</text>
+  <text x="78" y="767" class="small">Pilot config: localhost:1883 · TLS disabled · not production settings</text>
+  <text x="78" y="790" class="small">Local API / CLI / config / command-handler code; remote commands disabled</text>
+
+  <rect x="584" y="181" width="152" height="112" rx="12" class="planned"/>
+  <text x="604" y="211" class="box-title">Unreliable</text>
+  <text x="604" y="235" class="box-title">network</text>
+  <text x="604" y="263" class="small">Target: outbound</text>
+  <text x="604" y="281" class="small">MQTT + TLS</text>
+  <rect x="584" y="316" width="152" height="172" rx="12" class="prototype"/>
+  <text x="604" y="346" class="box-title">MQTT broker</text>
+  <text x="604" y="373" class="body">Mosquitto used</text>
+  <text x="604" y="397" class="body">by integration test</text>
+  <text x="604" y="431" class="small">No production broker</text>
+  <text x="604" y="451" class="small">deployment config</text>
+  <text x="604" y="471" class="small">in this repo</text>
+  <path d="M526 744 C552 744 552 397 582 397" class="flow"/>
+
+  <rect x="798" y="181" width="280" height="170" rx="12" class="implemented"/>
+  <text x="820" y="211" class="box-title">Backend ingestion service</text>
+  <text x="820" y="239" class="body">Decompress · validate contracts</text>
+  <text x="820" y="262" class="body">Deduplicate batch sequence</text>
+  <text x="820" y="285" class="body">Persist, then create selective ACK</text>
+  <text x="820" y="322" class="small">backend/src/ingest.py · callable module</text>
+
+  <rect x="1092" y="181" width="286" height="170" rx="12" class="prototype"/>
+  <text x="1114" y="211" class="box-title">Backend repository · SQLite</text>
+  <text x="1114" y="239" class="body">Registry · batches · telemetry · events</text>
+  <text x="1114" y="262" class="body">Twin state · command audit tables</text>
+  <text x="1114" y="285" class="body">Idempotent ingest at code level</text>
+  <text x="1114" y="322" class="small">TimescaleDB migration exists; not the test DB</text>
+  <path d="M1078 266 L1090 266" class="flow"/>
+
+  <rect x="1392" y="181" width="346" height="170" rx="12" class="implemented"/>
+  <text x="1414" y="211" class="box-title">Central REST API</text>
+  <text x="1414" y="239" class="body">Sites · assets · live state · time series</text>
+  <text x="1414" y="262" class="body">Command request endpoint</text>
+  <text x="1414" y="285" class="body">Command service + audit records</text>
+  <text x="1414" y="322" class="small">FastAPI · read-only dashboard at /dashboard</text>
+  <path d="M1378 266 L1390 266" class="flow"/>
+
+  <path d="M660 488 C660 530 763 530 796 530" class="flow"/>
+  <text x="665" y="514" class="tiny">Test harness subscribes, ingests, updates twin, and publishes selective ACK</text>
+
+  <rect x="798" y="390" width="280" height="190" rx="12" class="implemented"/>
+  <text x="820" y="420" class="box-title">Live twin synchronization</text>
+  <text x="820" y="448" class="body">Reads latest site telemetry</text>
+  <text x="820" y="471" class="body">Flags stale values (&gt;120 s)</text>
+  <text x="820" y="494" class="body">Estimates PV / battery outputs</text>
+  <text x="820" y="517" class="body">Writes site twin state</text>
+  <text x="820" y="551" class="small">Module exists; no continuously wired worker</text>
+  <path d="M1234 351 C1234 370 946 366 946 388" class="flow"/>
+
+  <rect x="1092" y="390" width="286" height="190" rx="12" class="implemented"/>
+  <text x="1114" y="420" class="box-title">Twin models &amp; what-if</text>
+  <text x="1114" y="448" class="body">PV and battery baseline models</text>
+  <text x="1114" y="471" class="body">Load-growth scenario simulation</text>
+  <text x="1114" y="494" class="body">Unserved energy / LOLH / battery ageing</text>
+  <text x="1114" y="517" class="body">Illustrative outputs only</text>
+  <text x="1114" y="551" class="small">Ageing is illustrative; VRA calibration pending</text>
+  <path d="M1078 485 L1090 485" class="flow"/>
+
+  <rect x="1392" y="390" width="346" height="190" rx="12" class="prototype"/>
+  <text x="1414" y="420" class="box-title">Read-only site dashboard MVP</text>
+  <text x="1414" y="448" class="body">Telemetry · twin KPIs · assets · events</text>
+  <text x="1414" y="471" class="body">Signal history · automatic refresh · no commands</text>
+  <text x="1414" y="510" class="small">No auth, TimescaleDB, or VRA-specific KPIs yet</text>
+
+  <rect x="798" y="601" width="940" height="62" rx="12" class="implemented"/>
+  <text x="820" y="627" class="box-title">Shared contracts &amp; site configuration</text>
+  <text x="820" y="649" class="small">Pydantic models · exported JSON Schemas · YAML site/gateway config · equipment catalogue · validator</text>
+
+  <rect x="798" y="680" width="940" height="131" rx="12" class="implemented"/>
+  <text x="820" y="708" class="box-title">Simulator-to-twin vertical slice · verified in integration test</text>
+  <text x="820" y="735" class="body">Modbus simulator → gateway → Mosquitto MQTT → backend ingestion / ACK → stored telemetry → live twin</text>
+  <text x="820" y="760" class="body">Test covers gateway auto-reconnect, queued outage data, replay after broker + gateway restart, and twin update</text>
+  <text x="820" y="785" class="small">Production broker/TLS, live VRA data, DB operations and dashboard auth remain deployment work</text>
+  <rect x="36" y="866" width="1728" height="268" rx="18" class="panel"/>
+  <text x="60" y="903" class="lane-title">PROGRESS SNAPSHOT · LATEST WEEKLY PRESENTATION, CHECKED AGAINST THIS CHECKOUT</text>
+  <line x1="60" y1="923" x2="1740" y2="923" stroke="#d9e1eb" stroke-width="1.5"/>
+
+  <text x="60" y="960" class="box-title">Phase status</text>
+  <text x="60" y="987" class="body">P0 Discovery — pending VRA site/data access</text>
+  <text x="60" y="1011" class="body">P1 Architecture/contracts — done</text>
+  <text x="60" y="1035" class="body">P2 Edge/pipeline · P3 twin core · P5 early simulation — in progress</text>
+  <text x="60" y="1059" class="body">P4 calibration · P6 supervised control · P7 fleet scale — not started</text>
+
+  <line x1="665" y1="947" x2="665" y2="1105" stroke="#d9e1eb" stroke-width="1.5"/>
+  <text x="695" y="960" class="box-title">Verified in this workspace</text>
+  <text x="695" y="987" class="body">31 tests pass locally; TimescaleDB integration test runs in CI.</text>
+  <text x="695" y="1011" class="body">End-to-end simulator / outage replay / explicit gaps verified.</text>
+  <text x="695" y="1035" class="body">Battery ageing now separates calendar fade and cycle fade.</text>
+  <text x="695" y="1059" class="body">Read-only dashboard, API diagnostics and persistence forecast baseline.</text>
+  <text x="695" y="1083" class="small">VRA data/calibration, auth, broker/TLS deployment remain outstanding.</text>
+
+  <line x1="1352" y1="947" x2="1352" y2="1105" stroke="#d9e1eb" stroke-width="1.5"/>
+  <text x="1380" y="960" class="box-title">Next priorities from the deck</text>
+  <text x="1380" y="984" class="small">1 ✓ Sequence-number regression fix</text>
+  <text x="1380" y="1005" class="small">2 ✓ End-to-end outage/replay proof</text>
+  <text x="1380" y="1026" class="small">3 ✓ Disk budget, deadband, gap handling</text>
+  <text x="1380" y="1047" class="small">4 ✓ Ageing model · assumptions uncalibrated</text>
+  <text x="1380" y="1068" class="small">5 ✓ Dependencies, Make targets, CI</text>
+  <text x="1380" y="1089" class="small">6 ✓ Dashboard + TimescaleDB repo/CI test</text>
+  <text x="1380" y="1110" class="small">7 ◐ Analytics baseline; calibration needs data</text>
+
+  <text x="42" y="1160" class="tiny">Interpretation note: a module being present is not evidence that it is deployed or integrated. Target fleet architecture is intentionally shown as planned where absent from this checkout.</text>
+</svg>

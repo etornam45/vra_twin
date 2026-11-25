@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7f6">
+    <meta name="description" content="Read-only operations dashboard for the VRA island mini-grid digital twin prototype.">
+    <title>VRA Digital Twin | Site dashboard</title>
+    <link rel="stylesheet" href="/dashboard-assets/dashboard.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <a class="brand" href="/dashboard" aria-label="VRA Digital Twin dashboard">
+          <span class="brand-mark" aria-hidden="true">V</span>
+          <span><strong>VRA</strong><small>Digital Twin</small></span>
+        </a>
+        <div class="nav-caption">WORKSPACE</div>
+        <a class="nav-link active" href="/dashboard"><span class="nav-icon">◫</span> Site overview</a>
+        <a class="nav-link disabled" aria-disabled="true"><span class="nav-icon">⌁</span> Assets <span class="soon">SOON</span></a>
+        <a class="nav-link disabled" aria-disabled="true"><span class="nav-icon">◷</span> Events <span class="soon">SOON</span></a>
+        <div class="sidebar-footer">
+          <span class="environment-dot"></span>
+          <div><strong>Prototype workspace</strong><small>Read-only dashboard</small></div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="breadcrumbs">Workspace <span>/</span> <strong>Site overview</strong></div>
+          <div class="topbar-right">
+            <label class="site-picker-label" for="site-select">SITE</label>
+            <select id="site-select" aria-label="Select site" disabled>
+              <option>Loading sites…</option>
+            </select>
+            <button id="refresh-button" class="icon-button" type="button" aria-label="Refresh dashboard" title="Refresh dashboard">
+              <span aria-hidden="true">↻</span>
+            </button>
+            <span id="last-updated" class="last-updated">Waiting for data</span>
+          </div>
+        </header>
+
+        <div class="content-wrap">
+          <div id="notice" class="notice" role="status">
+            Prototype view. The pilot site configuration is illustrative; confirm VRA data, units and operating limits before operational use.
+          </div>
+          <section class="page-heading">
+            <div>
+              <div class="eyebrow">ISLAND OPERATIONS</div>
+              <h1 id="site-title">Site overview</h1>
+              <p id="site-subtitle">A live view of assets, power balance and telemetry quality.</p>
+            </div>
+            <div class="heading-status">
+              <span id="link-indicator" class="status-pill status-unknown"><span class="status-dot"></span> No site selected</span>
+              <span id="site-location" class="location-label">—</span>
+            </div>
+          </section>
+
+          <section id="error-panel" class="empty-state hidden" aria-live="polite">
+            <div class="empty-icon">!</div>
+            <h2>Dashboard data is unavailable</h2>
+            <p id="error-message">Check that the backend API is running, then try again.</p>
+            <button id="retry-button" class="button button-primary" type="button">Retry</button>
+          </section>
+
+          <section id="dashboard-content" class="dashboard-content">
+            <div id="no-sites-panel" class="empty-state hidden">
+              <div class="empty-icon">⌂</div>
+              <h2>No sites registered yet</h2>
+              <p>Register a site and ingest telemetry through the backend before expecting operational readings here.</p>
+            </div>
+
+            <div id="kpi-grid" class="kpi-grid">
+              <article class="kpi-card">
+                <div class="kpi-top"><span>PV GENERATION</span><span class="kpi-icon icon-sun">☼</span></div>
+                <div id="kpi-pv" class="kpi-value">—</div>
+                <div class="kpi-foot"><span>Active power</span><span class="metric-source">kW</span></div>
+              </article>
+              <article class="kpi-card">
+                <div class="kpi-top"><span>SITE LOAD</span><span class="kpi-icon icon-load">⌂</span></div>
+                <div id="kpi-load" class="kpi-value">—</div>
+                <div class="kpi-foot"><span>Measured demand</span><span class="metric-source">kW</span></div>
+              </article>
+              <article class="kpi-card">
+                <div class="kpi-top"><span>BATTERY STATE OF CHARGE</span><span class="kpi-icon icon-battery">▰</span></div>
+                <div id="kpi-soc" class="kpi-value">—</div>
+                <div class="kpi-foot"><span id="battery-status">BESS · waiting for readings</span><span class="metric-source">%</span></div>
+              </article>
+              <article class="kpi-card">
+                <div class="kpi-top"><span>POWER IMBALANCE</span><span class="kpi-icon icon-balance">⌁</span></div>
+                <div id="kpi-imbalance" class="kpi-value">—</div>
+                <div class="kpi-foot"><span>Generation + storage − load</span><span class="metric-source">kW</span></div>
+              </article>
+            </div>
+
+            <div class="main-grid">
+              <section class="panel chart-panel">
+                <div class="panel-heading">
+                  <div><div class="eyebrow">TELEMETRY</div><h2>Signal history</h2></div>
+                  <div class="chart-controls">
+                    <label class="visually-hidden" for="signal-select">Signal</label>
+                    <select id="signal-select" disabled><option>No numeric signals</option></select>
+                    <div class="range-tabs" role="group" aria-label="Chart time range">
+                      <button type="button" data-hours="1">1H</button>
+                      <button type="button" data-hours="6">6H</button>
+                      <button type="button" data-hours="24" class="selected">24H</button>
+                    </div>
+                  </div>
+                </div>
+                <div id="chart-meta" class="chart-meta">Select a signal to explore received samples.</div>
+                <div id="timeseries-chart" class="chart-area" aria-live="polite">
+                  <div class="chart-empty">Telemetry history will appear when samples are available.</div>
+                </div>
+              </section>
+
+              <section class="panel energy-panel">
+                <div class="panel-heading">
+                  <div><div class="eyebrow">LIVE POWER</div><h2>Energy balance</h2></div>
+                  <span id="balance-asof" class="panel-time">No twin state</span>
+                </div>
+                <div class="balance-visual">
+                  <div class="balance-row">
+                    <span class="balance-label"><i class="legend-swatch pv"></i>Solar PV</span>
+                    <span id="flow-pv" class="balance-number">—</span>
+                    <div class="balance-track"><span id="bar-pv" class="balance-bar pv"></span></div>
+                  </div>
+                  <div class="balance-row">
+                    <span class="balance-label"><i class="legend-swatch battery"></i>Battery</span>
+                    <span id="flow-battery" class="balance-number">—</span>
+                    <div class="balance-track"><span id="bar-battery" class="balance-bar battery"></span></div>
+                  </div>
+                  <div class="balance-row">
+                    <span class="balance-label"><i class="legend-swatch load"></i>Site load</span>
+                    <span id="flow-load" class="balance-number">—</span>
+                    <div class="balance-track"><span id="bar-load" class="balance-bar load"></span></div>
+                  </div>
+                </div>
+                <div class="balance-note"><span class="note-mark">i</span><span>Battery discharge is positive; charging is negative. Balance values come from the twin state when available.</span></div>
+              </section>
+            </div>
+
+            <div class="lower-grid">
+              <section class="panel assets-panel">
+                <div class="panel-heading">
+                  <div><div class="eyebrow">REGISTERED EQUIPMENT</div><h2>Asset health</h2></div>
+                  <span id="asset-count" class="count-badge">0 assets</span>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>ASSET</th><th>STATUS</th><th>LAST UPDATE</th><th>QUALITY</th></tr></thead>
+                    <tbody id="asset-table"><tr><td colspan="4" class="table-empty">Waiting for registered assets.</td></tr></tbody>
+                  </table>
+                </div>
+              </section>
+              <section class="panel events-panel">
+                <div class="panel-heading">
+                  <div><div class="eyebrow">SITE ACTIVITY</div><h2>Recent events</h2></div>
+                  <span id="event-count" class="count-badge">0 events</span>
+                </div>
+                <div id="event-list" class="event-list"><div class="list-empty">No events have been received.</div></div>
+              </section>
+            </div>
+
+            <section class="panel readings-panel">
+              <div class="panel-heading">
+                <div><div class="eyebrow">DATA QUALITY &amp; PROVENANCE</div><h2>Latest readings</h2></div>
+                <div class="readings-summary"><span id="reading-count">0 signals</span><span class="summary-separator">·</span><span id="samples-count">0 samples in 24h</span></div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>ASSET / TAG</th><th>VALUE</th><th>QUALITY</th><th>RESOLUTION</th><th>DEVICE TIME</th></tr></thead>
+                  <tbody id="readings-table"><tr><td colspan="5" class="table-empty">Waiting for telemetry samples.</td></tr></tbody>
+                </table>
+              </div>
+            </section>
+            <footer class="page-footer">VRA Digital Twin prototype · Read-only monitoring · Data is displayed with source timestamps; this view does not issue control commands.</footer>
+          </section>
+        </div>
+      </main>
+    </div>
+    <script src="/dashboard-assets/dashboard.js" defer></script>
+  </body>
+</html>

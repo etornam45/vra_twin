@@ -14,6 +14,42 @@ import zstandard as zstd
 from contracts.src.messages import TelemetryBatch, SeriesColumn
 
 
+def sample_thresholds(
+    deadband: float,
+    max_interval_s: int,
+    pressure_pct: float,
+    downsample_pressure_pct: float,
+    drop_pressure_pct: float
+) -> Optional[Tuple[float, int]]:
+    """Return normal, relaxed, or drop thresholds for the current queue pressure."""
+    if pressure_pct >= drop_pressure_pct:
+        return None
+    if pressure_pct >= downsample_pressure_pct:
+        return deadband * 2, max_interval_s * 2
+    return deadband, max_interval_s
+
+
+def should_emit_sample(
+    value: Optional[float],
+    quality: int,
+    sample_ms: int,
+    previous_value: Optional[float],
+    previous_quality: Optional[int],
+    last_sent_ms: Optional[int],
+    deadband: float,
+    max_interval_s: int
+) -> bool:
+    if last_sent_ms is None:
+        return True
+    if quality != previous_quality or value is None or previous_value is None:
+        return True
+    if sample_ms - last_sent_ms >= max_interval_s * 1000:
+        return True
+    if deadband == 0:
+        return True
+    return abs(value - previous_value) >= deadband
+
+
 class TelemetryEncoder:
     def __init__(self, site_id: str, gateway_id: str, cfg_version: str = "v1.0"):
         self.site_id = site_id
@@ -26,6 +62,7 @@ class TelemetryEncoder:
         self,
         series_data: Dict[Tuple[str, str, str], Dict[str, list]],
         t0_ms: int,
+        seq: int = 0,
         clock_quality: str = "synced",
         clock_offset_ms: int = 0
     ) -> Tuple[bytes, int, int, int]:
@@ -57,7 +94,7 @@ class TelemetryEncoder:
         batch = TelemetryBatch(
             site_id=self.site_id,
             gateway_id=self.gateway_id,
-            seq=0,  # Will be assigned during SQLite outbox insert
+            seq=seq,
             t0_ms=t0_ms,
             clock_quality=clock_quality,
             clock_offset_ms=clock_offset_ms,

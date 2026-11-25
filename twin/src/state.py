@@ -60,11 +60,12 @@ class LiveTwinSynchronizer:
             val = r["value_num"]
             q = r["quality"]
             ts = r["ts"]
+            ts_iso = ts.isoformat() if isinstance(ts, datetime) else ts
 
             latest_measurements.setdefault(asset, {})[tag] = val
 
             # Check freshness
-            sample_dt = datetime.fromisoformat(ts)
+            sample_dt = ts if isinstance(ts, datetime) else datetime.fromisoformat(ts)
             age_s = max(0.0, (now_dt - sample_dt).total_seconds())
             status = "ok" if age_s < 120 else "offline"
             active_alarms = []
@@ -81,7 +82,7 @@ class LiveTwinSynchronizer:
 
             assets_twin[asset].values[tag] = TagValue(
                 v=val,
-                t=ts,
+                t=ts_iso,
                 q=q,
                 p=Provenance.MEASURED
             )

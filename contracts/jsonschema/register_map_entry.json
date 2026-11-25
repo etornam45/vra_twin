@@ -1,0 +1,134 @@
+{
+  "$defs": {
+    "SignConvention": {
+      "description": "Sign convention mapping for power/energy points.",
+      "enum": [
+        "as_is",
+        "invert"
+      ],
+      "title": "SignConvention",
+      "type": "string"
+    },
+    "TagClass": {
+      "description": "Tag polling / telemetry update classification.",
+      "enum": [
+        "fast",
+        "standard",
+        "slow",
+        "event"
+      ],
+      "title": "TagClass",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Entry in mapping.csv or catalog register table.",
+  "properties": {
+    "asset": {
+      "title": "Asset",
+      "type": "string"
+    },
+    "tag": {
+      "title": "Tag",
+      "type": "string"
+    },
+    "register": {
+      "minimum": 0,
+      "title": "Register",
+      "type": "integer"
+    },
+    "function": {
+      "default": "holding",
+      "enum": [
+        "holding",
+        "input",
+        "coil",
+        "discrete"
+      ],
+      "title": "Function",
+      "type": "string"
+    },
+    "type": {
+      "default": "uint16",
+      "enum": [
+        "uint16",
+        "int16",
+        "uint32",
+        "int32",
+        "float32",
+        "bitfield",
+        "string"
+      ],
+      "title": "Type",
+      "type": "string"
+    },
+    "scale": {
+      "default": 1.0,
+      "title": "Scale",
+      "type": "number"
+    },
+    "unit": {
+      "default": "",
+      "title": "Unit",
+      "type": "string"
+    },
+    "sign": {
+      "$ref": "#/$defs/SignConvention",
+      "default": "as_is"
+    },
+    "class": {
+      "$ref": "#/$defs/TagClass",
+      "default": "standard"
+    },
+    "min": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Min"
+    },
+    "max": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max"
+    },
+    "deadband": {
+      "default": 0.0,
+      "description": "Minimum value change before a sample is emitted",
+      "minimum": 0.0,
+      "title": "Deadband",
+      "type": "number"
+    },
+    "max_interval_s": {
+      "default": 60,
+      "description": "Maximum time between emitted samples",
+      "minimum": 1,
+      "title": "Max Interval S",
+      "type": "integer"
+    },
+    "writable": {
+      "default": false,
+      "title": "Writable",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "asset",
+    "tag",
+    "register"
+  ],
+  "title": "RegisterMapEntry",
+  "type": "object"
+}

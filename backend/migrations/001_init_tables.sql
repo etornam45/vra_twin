@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS commands (
     gateway_id TEXT NOT NULL,
     asset_id TEXT NOT NULL,
     type TEXT NOT NULL,
-    class TEXT NOT NULL,
+    command_class TEXT NOT NULL,
     params JSONB NOT NULL DEFAULT '{}'::jsonb,
     reason TEXT NOT NULL,
     requested_by TEXT NOT NULL,

@@ -8,7 +8,6 @@ Lifecycle: REQUESTED -> AUTHORISED -> VALIDATED -> SENT -> CONFIRMED (or REJECTE
 - Records immutable audit trail in command_audit
 """
 
-import json
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional, Tuple
 import uuid
@@ -85,16 +84,16 @@ class CommandService:
                     cmd.asset_id,
                     cmd.type,
                     command_class,
-                    json.dumps(cmd.params),
+                    self.repo.encode_json(cmd.params),
                     cmd.reason,
                     cmd.requested_by,
-                    cmd.issued_at,
-                    cmd.expires_at
+                    self.repo.adapt_timestamp(cmd.issued_at),
+                    self.repo.adapt_timestamp(cmd.expires_at)
                 )
             )
             conn.execute(
                 "INSERT INTO command_audit (cmd_id, state, details, logged_at) VALUES (?, 'SENT', 'Dispatched to gateway', ?)",
-                (cmd.cmd_id, now_dt.isoformat())
+                (cmd.cmd_id, self.repo.adapt_timestamp(now_dt.isoformat()))
             )
             conn.commit()
 
@@ -110,10 +109,20 @@ class CommandService:
                 SET state = ?, readback = ?, finished_at = ?
                 WHERE cmd_id = ?
                 """,
-                (res.state, json.dumps(res.readback), now_iso, res.cmd_id)
+                (
+                    res.state,
+                    self.repo.encode_json(res.readback),
+                    self.repo.adapt_timestamp(now_iso),
+                    res.cmd_id,
+                )
             )
             conn.execute(
                 "INSERT INTO command_audit (cmd_id, state, details, logged_at) VALUES (?, ?, ?, ?)",
-                (res.cmd_id, res.state, f"Finished with reason: {res.reason}", now_iso)
+                (
+                    res.cmd_id,
+                    res.state,
+                    f"Finished with reason: {res.reason}",
+                    self.repo.adapt_timestamp(now_iso),
+                )
             )
             conn.commit()

@@ -10,9 +10,16 @@ Section 3.4 & 3.6 Implementation:
 import os
 import sqlite3
 import time
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import zstandard as zstd
+
+from contracts.src.messages import EventMessage
+
+
+BatchPayload = Union[bytes, Callable[[int], bytes]]
 
 
 INIT_SQL = """
@@ -71,6 +78,8 @@ CREATE TABLE IF NOT EXISTS tag_state (
 CREATE TABLE IF NOT EXISTS data_gaps (
     gap_id TEXT PRIMARY KEY,
     stream TEXT NOT NULL,
+    asset_id TEXT,
+    tag TEXT,
     t_from_ms INTEGER NOT NULL,
     t_to_ms INTEGER NOT NULL,
     cause TEXT NOT NULL,
@@ -146,32 +155,39 @@ class GatewayStorage:
     def _init_db(self):
         with self._get_connection() as conn:
             conn.executescript(INIT_SQL)
+            columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(data_gaps)")
+            }
+            for name in ("asset_id", "tag"):
+                if name not in columns:
+                    conn.execute(f"ALTER TABLE data_gaps ADD COLUMN {name} TEXT")
 
     def allocate_seq_and_insert_batch(
         self,
         stream: str,
         topic: str,
-        payload: bytes,
+        payload: BatchPayload,
         n_samples: int,
         t_first_ms: int,
         t_last_ms: int,
         priority: int = 5,
         enc: str = "zstd+json",
-        tag_updates: Optional[List[Tuple[str, str, Optional[float], Optional[str], int, int]]] = None
+        tag_updates: Optional[
+            List[Tuple[str, str, Optional[float], Optional[str], int, int, int]]
+        ] = None
     ) -> int:
         """Atomically increments sequence counter, stores batch in outbox, and updates tag_state."""
         now_ms = int(time.time() * 1000)
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            cursor.execute("BEGIN IMMEDIATE")
+
             # 1. Allocate sequence number
-            cursor.execute("SELECT next_seq FROM seq_counter WHERE stream = ?", (stream,))
-            row = cursor.fetchone()
-            if not row:
-                seq = 1
-                cursor.execute("INSERT INTO seq_counter (stream, next_seq) VALUES (?, ?)", (stream, seq + 1))
-            else:
-                seq = row["next_seq"]
-                cursor.execute("UPDATE seq_counter SET next_seq = next_seq + 1 WHERE stream = ?", (stream,))
+            seq = self._allocate_seq(cursor, stream)
+
+            batch_payload = payload(seq) if callable(payload) else payload
+            if not isinstance(batch_payload, bytes):
+                raise TypeError("batch payload must be bytes")
 
             # 2. Insert into outbox
             cursor.execute(
@@ -181,7 +197,7 @@ class GatewayStorage:
                     n_samples, t_first_ms, t_last_ms, state, attempts, created_ms
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 0, ?)
                 """,
-                (stream, seq, priority, topic, payload, enc, len(payload), n_samples, t_first_ms, t_last_ms, now_ms)
+                (stream, seq, priority, topic, batch_payload, enc, len(batch_payload), n_samples, t_first_ms, t_last_ms, now_ms)
             )
 
             # 3. Update tag_state
@@ -200,6 +216,137 @@ class GatewayStorage:
                     tag_updates
                 )
 
+            conn.commit()
+            return seq
+
+    @staticmethod
+    def _allocate_seq(cursor: sqlite3.Cursor, stream: str) -> int:
+        cursor.execute("SELECT next_seq FROM seq_counter WHERE stream = ?", (stream,))
+        row = cursor.fetchone()
+        if row is None:
+            cursor.execute(
+                "INSERT INTO seq_counter (stream, next_seq) VALUES (?, 2)",
+                (stream,)
+            )
+            return 1
+        seq = row["next_seq"]
+        cursor.execute(
+            "UPDATE seq_counter SET next_seq = next_seq + 1 WHERE stream = ?",
+            (stream,)
+        )
+        return seq
+
+    def get_tag_state(self, asset_id: str, tag: str) -> Optional[sqlite3.Row]:
+        with self._get_connection() as conn:
+            return conn.execute(
+                "SELECT * FROM tag_state WHERE asset_id = ? AND tag = ?",
+                (asset_id, tag)
+            ).fetchone()
+
+    def add_data_gap(
+        self,
+        asset_id: str,
+        tag: str,
+        t_ms: int,
+        cause: str
+    ) -> str:
+        """Coalesces consecutive omitted readings into a durable per-tag gap."""
+        with self._get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT gap_id FROM data_gaps
+                WHERE stream = 'telemetry' AND asset_id = ? AND tag = ?
+                    AND cause = ? AND reported = 0
+                ORDER BY t_to_ms DESC LIMIT 1
+                """,
+                (asset_id, tag, cause)
+            ).fetchone()
+            if row is not None:
+                conn.execute(
+                    "UPDATE data_gaps SET t_to_ms = MAX(t_to_ms, ?) WHERE gap_id = ?",
+                    (t_ms, row["gap_id"])
+                )
+                return row["gap_id"]
+
+            gap_id = str(uuid.uuid4())
+            conn.execute(
+                """
+                INSERT INTO data_gaps (
+                    gap_id, stream, asset_id, tag, t_from_ms, t_to_ms, cause, reported
+                ) VALUES (?, 'telemetry', ?, ?, ?, ?, ?, 0)
+                """,
+                (gap_id, asset_id, tag, t_ms, t_ms, cause)
+            )
+            return gap_id
+
+    def get_unreported_data_gaps(self, limit: int = 100) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT gap_id, stream, asset_id, tag, t_from_ms, t_to_ms, cause
+                FROM data_gaps WHERE reported = 0
+                ORDER BY t_from_ms LIMIT ?
+                """,
+                (limit,)
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def queue_data_gap_event(
+        self,
+        gap: Dict[str, Any],
+        site_id: str,
+        gateway_id: str
+    ) -> Optional[int]:
+        """Atomically queues a gap event and marks its source gap as reported."""
+        now_ms = int(time.time() * 1000)
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("BEGIN IMMEDIATE")
+            row = cursor.execute(
+                "SELECT reported FROM data_gaps WHERE gap_id = ?",
+                (gap["gap_id"],)
+            ).fetchone()
+            if row is None or row["reported"]:
+                return None
+
+            seq = self._allocate_seq(cursor, "events")
+            asset_id = gap.get("asset_id")
+            tag = gap.get("tag")
+            event = EventMessage(
+                event_id=gap["gap_id"],
+                site_id=site_id,
+                gateway_id=gateway_id,
+                seq=seq,
+                kind="data_gap",
+                asset_id=asset_id,
+                code="TELEMETRY_DROPPED",
+                severity="warning",
+                message=f"Telemetry samples omitted for {asset_id}.{tag}",
+                ts=datetime.fromtimestamp(
+                    gap["t_to_ms"] / 1000, tz=timezone.utc
+                ).isoformat(),
+                context={
+                    "tag": tag,
+                    "t_from_ms": gap["t_from_ms"],
+                    "t_to_ms": gap["t_to_ms"],
+                    "cause": gap["cause"]
+                }
+            )
+            payload = event.model_dump_json().encode("utf-8")
+            topic = f"vra/{site_id}/events/{gateway_id}"
+            cursor.execute(
+                """
+                INSERT INTO outbox (
+                    stream, seq, priority, topic, payload, enc, bytes,
+                    n_samples, t_first_ms, t_last_ms, state, attempts, created_ms
+                ) VALUES ('events', ?, 1, ?, ?, 'json', ?, 1, ?, ?, 'PENDING', 0, ?)
+                """,
+                (seq, topic, payload, len(payload), gap["t_from_ms"], gap["t_to_ms"], now_ms)
+            )
+            cursor.execute(
+                "UPDATE data_gaps SET reported = 1 WHERE gap_id = ?",
+                (gap["gap_id"],)
+            )
             conn.commit()
             return seq
 

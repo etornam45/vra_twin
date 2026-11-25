@@ -43,6 +43,10 @@ class AdaptiveWindow:
         self.current_window = max(1, self.current_window // 2)
         self.consecutive_successes = 0
 
+    def reset_inflight(self):
+        self.inflight_count = 0
+        self.consecutive_successes = 0
+
 
 class Forwarder:
     def __init__(
@@ -69,7 +73,6 @@ class Forwarder:
         self._running = False
         self._mqtt_client: Optional[mqtt.Client] = None
         self._ack_topic = f"vra/{site_id}/ack/{gateway_id}"
-        self._connected_event = asyncio.Event()
 
     def _setup_mqtt(self):
         client = mqtt.Client(
@@ -89,16 +92,14 @@ class Forwarder:
             client.subscribe(self._ack_topic, qos=1)
             # Requeue any batches that were inflight before reconnect
             self.db.requeue_all_inflight()
-            self._connected_event.set()
+            self.window.reset_inflight()
         else:
             print(f"[Forwarder] MQTT Connection failed: {reason_code}")
             self.link_state = "OFFLINE"
-            self._connected_event.clear()
 
     def _on_disconnect(self, client, userdata, flags, reason_code, properties):
         print(f"[Forwarder] MQTT Disconnected: {reason_code}")
         self.link_state = "OFFLINE"
-        self._connected_event.clear()
         self.window.on_timeout()
 
     def _on_message(self, client, userdata, msg):
@@ -126,26 +127,15 @@ class Forwarder:
         self._running = True
         self._setup_mqtt()
 
-        while self._running:
-            # 1. Connect if offline
-            if self.link_state == "OFFLINE":
-                try:
-                    self._mqtt_client.connect_async(self.broker_host, self.broker_port, keepalive=30)
-                    self._mqtt_client.loop_start()
-                    # Wait briefly for connection
-                    try:
-                        await asyncio.wait_for(self._connected_event.wait(), timeout=3.0)
-                    except asyncio.TimeoutError:
-                        pass
-                except Exception as e:
-                    await asyncio.sleep(2.0)
-                    continue
+        self._mqtt_client.reconnect_delay_set(min_delay=1, max_delay=5)
+        self._mqtt_client.connect_async(self.broker_host, self.broker_port, keepalive=30)
+        self._mqtt_client.loop_start()
 
-            # 2. Check for stale inflight timeouts
+        while self._running:
+            # Reconnection is managed by Paho's network loop; keep unsent data queued offline.
             self.db.requeue_stale_inflight(self.ack_timeout_s)
 
-            # 3. Publish pending batches while window allows
-            while self.window.available() and self.link_state != "OFFLINE":
+            while self.link_state != "OFFLINE" and self.window.available():
                 batch = self.db.next_to_send(self.live_window_s, allow_backfill=True)
                 if batch is None:
                     break
@@ -174,5 +164,5 @@ class Forwarder:
     def stop(self):
         self._running = False
         if self._mqtt_client:
-            self._mqtt_client.loop_stop()
             self._mqtt_client.disconnect()
+            self._mqtt_client.loop_stop()
